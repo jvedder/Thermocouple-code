@@ -1,0 +1,10 @@
+#ignore the Setting Folder
+.settings/
+
+#ignore the trace folder
+.tracecompass/
+
+#ignore the build output folders
+Debug/
+Release/
+
