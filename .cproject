@@ -233,4 +233,5 @@
 			<resource resourceType="PROJECT" workspacePath="thermocouple_F042K6"/>
 		</configuration>
 	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 </cproject>
