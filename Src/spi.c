@@ -42,6 +42,8 @@
 
 #include "gpio.h"
 
+#include "stm32f0xx_hal.h"
+
 /* USER CODE BEGIN 0 */
 
 /* USER CODE END 0 */
@@ -54,7 +56,7 @@ void MX_SPI1_Init(void)
 
   hspi1.Instance = SPI1;
   hspi1.Init.Mode = SPI_MODE_MASTER;
-  hspi1.Init.Direction = SPI_DIRECTION_2LINES_RXONLY;
+  hspi1.Init.Direction = SPI_DIRECTION_2LINES; // SPI_DIRECTION_2LINES_RXONLY;
   hspi1.Init.DataSize = SPI_DATASIZE_16BIT;
   hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
@@ -65,7 +67,7 @@ void MX_SPI1_Init(void)
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
   hspi1.Init.CRCPolynomial = 7;
   hspi1.Init.CRCLength = SPI_CRC_LENGTH_DATASIZE;
-  hspi1.Init.NSSPMode = SPI_NSS_PULSE_ENABLE;
+  hspi1.Init.NSSPMode = SPI_NSS_PULSE_DISABLE;
   if (HAL_SPI_Init(&hspi1) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
@@ -87,7 +89,8 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* spiHandle)
   
     /**SPI1 GPIO Configuration    
     PB3     ------> SPI1_SCK
-    PB4     ------> SPI1_MISO 
+    PB4     ------> SPI1_MISO
+    PB5     ------> SPI1_MOSI (Not used here)
     */
     GPIO_InitStruct.Pin = SPI_SCK_Pin|SPI_MISO_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
@@ -126,6 +129,46 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef* spiHandle)
 } 
 
 /* USER CODE BEGIN 1 */
+
+uint32_t SPI_ReadMax31855()
+{
+	  uint16_t hiword;
+	  uint16_t loword;
+
+	  //TODO: Add check that TXE=1 (Transmit buffer empty = true)
+
+	  /* Enable SPI_CS0 */
+	  HAL_GPIO_WritePin(SPI_CS0_N_GPIO_Port, SPI_CS0_N_Pin, GPIO_PIN_RESET);
+
+	  /* clear fiforxthresold for 16bit data length */
+	  CLEAR_BIT(hspi1.Instance->CR2, SPI_RXFIFO_THRESHOLD);
+
+
+	  /* start transmission of 32 bits (2x 16-bits) */
+	  WRITE_REG(hspi1.Instance->DR, (uint16_t) 0U);
+	  WRITE_REG(hspi1.Instance->DR, (uint16_t) 0U);
+
+
+	  while (READ_BIT(hspi1.Instance->SR, SPI_SR_RXNE) == 0)
+	  {
+		  // spin wait for reception to complete
+		  // TODO: add a timeout
+	  }
+	  hiword = READ_REG(hspi1.Instance->DR);
+
+	  while (READ_BIT(hspi1.Instance->SR, SPI_SR_RXNE) == 0)
+	  {
+		  // spin wait for reception to complete
+		  // TODO: add a timeout
+	  }
+	  loword = READ_REG(hspi1.Instance->DR);
+
+
+	  /* Disable SPI_CS0 */
+	  HAL_GPIO_WritePin(SPI_CS0_N_GPIO_Port, SPI_CS0_N_Pin, GPIO_PIN_SET);
+
+	  return (hiword << 16) | loword;
+}
 
 /* USER CODE END 1 */
 

@@ -61,6 +61,8 @@ extern void _Error_Handler(char *, int);
 
 void MX_SPI1_Init(void);
 
+uint32_t SPI_ReadMax31855();
+
 /* USER CODE BEGIN Prototypes */
 
 /* USER CODE END Prototypes */

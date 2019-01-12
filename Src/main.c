@@ -113,7 +113,7 @@ int main(void)
   MX_GPIO_Init();
   //MX_ADC_Init();
   //MX_I2C1_Init();
-  //MX_SPI1_Init();
+  MX_SPI1_Init();
   MX_USART1_UART_Init();
 
   //  Local Loopback on Tx and Rx on #1
@@ -139,7 +139,7 @@ int main(void)
     sprintf(msg, "\r\nHello World.\r\n");
     HAL_UART_Transmit(&huart1, (uint8_t *) msg, strlen(msg), 1000);
 
-  /* USER CODE END 2 */
+    /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
@@ -155,6 +155,9 @@ int main(void)
 
   	  /* turn on Green LED */
 	  HAL_GPIO_WritePin(LED_GRN_GPIO_Port, LED_GRN_Pin, GPIO_PIN_SET);
+
+
+	  SPI_ReadMax31855();
 
 	  if ((n & 0xFFFF) == 0)
 	  {
