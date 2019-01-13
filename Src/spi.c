@@ -130,7 +130,16 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef* spiHandle)
 
 /* USER CODE BEGIN 1 */
 
-uint32_t SPI_ReadMax31855(uint16_t channel)
+/**
+  * @brief  Reads a 32-bit word from the specified SPI device ID using
+  *         the SPI1 hardware module.
+  *
+  * @param  channel The channel number to read in the range of [0,3].
+  *         Used to specify which chip select to use.
+  *
+  * @retval the 32-bit value read from the SPI device.
+  */
+uint32_t SPI_Read32(uint16_t channel)
 {
 	assert_param(0<= channel && channel <=3);
 

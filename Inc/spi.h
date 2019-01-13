@@ -61,7 +61,7 @@ extern void _Error_Handler(char *, int);
 
 void MX_SPI1_Init(void);
 
-uint32_t SPI_ReadMax31855(uint16_t channel);
+uint32_t SPI_Read32(uint16_t channel);
 
 /* USER CODE BEGIN Prototypes */
 

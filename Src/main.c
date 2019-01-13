@@ -85,10 +85,13 @@ void SystemClock_Config(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-	volatile uint32_t i;
-	uint32_t n;
-	uint16_t lo, hi;
-	uint16_t chan;
+	volatile uint32_t i;	// timer loop
+	uint16_t chan;			// SPI1 Channel #
+	uint32_t n;				// raw value read from SPI MAX321855
+	int16_t lo, hi;		    // high and low words of raw value (note: signed)
+	uint16_t err;			// error flags
+	float tc_temp;			// thermocouple temperature in deg C
+	float ref_temp;			// reference temperature in dec C
 
 
   /* USER CODE END 1 */
@@ -151,11 +154,24 @@ int main(void)
 
 	  for(chan=0; chan<4; chan++)
 	  {
-		  n = SPI_ReadMax31855(chan);
+		  n = SPI_Read32(chan);
 
 		  lo = n & 0xFFFF;
 		  hi = n >> 16;
-		  sprintf(msg, "%d: %04X %04X\r\n", chan, hi, lo);
+
+		  err = n & 0x07;
+		  if (err)
+		  {
+			  tc_temp = 0.00;
+		  }
+		  else
+		  {
+			  tc_temp = ((float) (hi >> 2) ) / 4.0;
+		  }
+
+		  ref_temp = ((float) (lo >> 4) ) / 16.0;
+
+		  sprintf(msg, "%d: %04X %04X %6.2f %6.2f\r\n", chan, hi, lo, ref_temp, tc_temp);
 		  HAL_UART_Transmit(&huart1, (uint8_t *) msg, strlen(msg), 1000);
 	  }
 
