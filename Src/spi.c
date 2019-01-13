@@ -130,15 +130,31 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef* spiHandle)
 
 /* USER CODE BEGIN 1 */
 
-uint32_t SPI_ReadMax31855()
+uint32_t SPI_ReadMax31855(uint16_t channel)
 {
-	  uint16_t hiword;
-	  uint16_t loword;
+	assert_param(0<= channel && channel <=3);
 
-	  //TODO: Add check that TXE=1 (Transmit buffer empty = true)
+	uint16_t hiword;
+	uint16_t loword;
 
-	  /* Enable SPI_CS0 */
-	  HAL_GPIO_WritePin(SPI_CS0_N_GPIO_Port, SPI_CS0_N_Pin, GPIO_PIN_RESET);
+	//TODO: Add check that TXE=1 (Transmit buffer empty = true)
+
+	  /* Enable the SPI_CSx_N for this channel */
+	  switch(channel)
+	  {
+	  case 0:
+		  HAL_GPIO_WritePin(SPI_CS0_N_GPIO_Port, SPI_CS0_N_Pin, GPIO_PIN_RESET);
+		  break;
+	  case 1:
+		  HAL_GPIO_WritePin(SPI_CS1_N_GPIO_Port, SPI_CS1_N_Pin, GPIO_PIN_RESET);
+		  break;
+	  case 2:
+		  HAL_GPIO_WritePin(SPI_CS2_N_GPIO_Port, SPI_CS2_N_Pin, GPIO_PIN_RESET);
+		  break;
+	  case 3:
+		  HAL_GPIO_WritePin(SPI_CS3_N_GPIO_Port, SPI_CS3_N_Pin, GPIO_PIN_RESET);
+		  break;
+	  }
 
 	  /* clear fiforxthresold for 16bit data length */
 	  CLEAR_BIT(hspi1.Instance->CR2, SPI_RXFIFO_THRESHOLD);
@@ -165,8 +181,9 @@ uint32_t SPI_ReadMax31855()
 	  loword = READ_REG(hspi1.Instance->DR);
 
 
-	  /* Disable SPI_CS0 */
-	  HAL_GPIO_WritePin(SPI_CS0_N_GPIO_Port, SPI_CS0_N_Pin, GPIO_PIN_SET);
+	  /* Disable all SPI_CSx_N */
+	  HAL_GPIO_WritePin(GPIOA, SPI_CS3_N_Pin, GPIO_PIN_SET);
+	  HAL_GPIO_WritePin(GPIOB, SPI_CS0_N_Pin|SPI_CS1_N_Pin|SPI_CS2_N_Pin, GPIO_PIN_SET);
 
 	  return (hiword << 16) | loword;
 }

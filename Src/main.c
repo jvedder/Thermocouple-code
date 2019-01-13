@@ -88,6 +88,7 @@ int main(void)
 	volatile uint32_t i;
 	uint32_t n;
 	uint16_t lo, hi;
+	uint16_t chan;
 
 
   /* USER CODE END 1 */
@@ -148,18 +149,24 @@ int main(void)
   	  /* turn on Green LED */
 	  HAL_GPIO_WritePin(LED_GRN_GPIO_Port, LED_GRN_Pin, GPIO_PIN_SET);
 
-	  n = SPI_ReadMax31855();
+	  for(chan=0; chan<4; chan++)
+	  {
+		  n = SPI_ReadMax31855(chan);
 
-	  lo = n & 0xFFFF;
-	  hi = n >> 16;
-	  sprintf(msg, "%04X %04X\r\n", lo, hi);
+		  lo = n & 0xFFFF;
+		  hi = n >> 16;
+		  sprintf(msg, "%d: %04X %04X\r\n", chan, hi, lo);
+		  HAL_UART_Transmit(&huart1, (uint8_t *) msg, strlen(msg), 1000);
+	  }
+
+	  sprintf(msg, "\r\n");
 	  HAL_UART_Transmit(&huart1, (uint8_t *) msg, strlen(msg), 1000);
 
-  	  /* turn off Green LED */
+	  /* turn off Green LED */
 	  HAL_GPIO_WritePin(LED_GRN_GPIO_Port, LED_GRN_Pin, GPIO_PIN_RESET);
 
   	  /* wait a little bit */
-	  for (i=0; i<500000L; i++);
+	  for (i=0; i<5000000L; i++);
 
   /* USER CODE END WHILE */
 
