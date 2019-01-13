@@ -85,11 +85,10 @@ void SystemClock_Config(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-	uint32_t timeout;
+	volatile uint32_t i;
 	uint32_t n;
-	uint32_t err;
-	uint8_t tx;
-	uint8_t rx;
+	uint16_t lo, hi;
+
 
   /* USER CODE END 1 */
 
@@ -144,82 +143,23 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-  n = 0;
-  err = 0;
-  tx = 0;
   while (1)
   {
-	  n++;
-	  tx++;
-	  //if (tx == 0) tx = 1;
-
   	  /* turn on Green LED */
 	  HAL_GPIO_WritePin(LED_GRN_GPIO_Port, LED_GRN_Pin, GPIO_PIN_SET);
 
+	  n = SPI_ReadMax31855();
 
-	  SPI_ReadMax31855();
-
-	  if ((n & 0xFFFF) == 0)
-	  {
-		  sprintf(msg, "n=%lu err=%lu\r\n", n, err);
-		  HAL_UART_Transmit(&huart1, (uint8_t *) msg, strlen(msg), 1000);
-	  }
-
-	  /* Start USART Tx transmission */
-  	  USART2->TDR = tx;
-
-  	  /* Wait for Tx transfer complete */
-  	  timeout = 500000L;
-  	  while ( ((USART2->ISR & USART_ISR_TC) == 0) && (timeout > 0))
-  	  {
-  		  timeout--;
-  	  }
-
-  	  if (timeout == 0)
-  	  {
-  		sprintf(msg, "tx timeout\r\n");
-  		HAL_UART_Transmit(&huart1, (uint8_t *) msg, strlen(msg), 1000);
-  		err++;
-  	  }
-
-  	  /* Clear Tx transfer complete flag */
-  	  USART2->ICR |= USART_ICR_TCCF;
+	  lo = n & 0xFFFF;
+	  hi = n >> 16;
+	  sprintf(msg, "%04X %04X\r\n", lo, hi);
+	  HAL_UART_Transmit(&huart1, (uint8_t *) msg, strlen(msg), 1000);
 
   	  /* turn off Green LED */
 	  HAL_GPIO_WritePin(LED_GRN_GPIO_Port, LED_GRN_Pin, GPIO_PIN_RESET);
 
-  	  /* wait for receive flag */
-  	  timeout = 500000L;
-  	  while ( ((USART2->ISR & USART_ISR_RXNE) == 0) && (timeout > 0))
-  	  {
-  		timeout--;
-  	  }
-
-  	  /* Read the received byte */
-  	  rx = (uint8_t)(USART2->RDR); /* Receive data, clear flag */
-
-  	  if (timeout == 0)
-  	  {
-  		//Rx Timeout
-  		sprintf(msg, "rx timeout\r\n");
-    	HAL_UART_Transmit(&huart1, (uint8_t *) msg, strlen(msg), 1000);
-    	err++;
-  	  }
-  	  else
-  	  {
-		  if (tx != rx)
-		  {
-			sprintf(msg, "mismatch: tx %d, rx %d\r\n", (int) tx, (int) rx);
-			HAL_UART_Transmit(&huart1, (uint8_t *) msg, strlen(msg), 1000);
-			err++;
-		  }
-  	  }
-
-  	  /* turn on Red LED if error */
-  	  if (err > 0)
-  	  {
-  		  HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_SET);
-  	  }
+  	  /* wait a little bit */
+	  for (i=0; i<500000L; i++);
 
   /* USER CODE END WHILE */
 

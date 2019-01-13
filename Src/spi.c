@@ -143,6 +143,7 @@ uint32_t SPI_ReadMax31855()
 	  /* clear fiforxthresold for 16bit data length */
 	  CLEAR_BIT(hspi1.Instance->CR2, SPI_RXFIFO_THRESHOLD);
 
+	  SET_BIT(hspi1.Instance->CR1, SPI_CR1_SPE);
 
 	  /* start transmission of 32 bits (2x 16-bits) */
 	  WRITE_REG(hspi1.Instance->DR, (uint16_t) 0U);

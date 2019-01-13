@@ -67,12 +67,14 @@ void MX_GPIO_Init(void)
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, UART2_RE1_N_Pin|UART2_DE1_Pin|UART2_RE2_N_Pin|UART2_DE2_Pin 
-                          |LED_RED_Pin|LED_GRN_Pin|SPI_CS3_N_Pin, GPIO_PIN_RESET);
+  /*Configure GPIO pin Output High Level */
+  HAL_GPIO_WritePin(GPIOA, UART2_RE1_N_Pin|UART2_RE2_N_Pin|SPI_CS3_N_Pin, GPIO_PIN_SET);
 
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, SPI_CS0_N_Pin|SPI_CS1_N_Pin|SPI_CS2_N_Pin, GPIO_PIN_RESET);
+  /*Configure GPIO pin Output Low Level */
+  HAL_GPIO_WritePin(GPIOA, UART2_DE1_Pin|UART2_DE2_Pin|LED_RED_Pin|LED_GRN_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output High Level */
+  HAL_GPIO_WritePin(GPIOB, SPI_CS0_N_Pin|SPI_CS1_N_Pin|SPI_CS2_N_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pins : PAPin PAPin PAPin PAPin 
                            PAPin */
