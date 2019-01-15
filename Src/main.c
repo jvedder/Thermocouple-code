@@ -89,10 +89,10 @@ int main(void)
 	uint16_t chan;			// SPI1 Channel #
 	uint32_t n;				// raw value read from SPI MAX321855
 	int16_t lo, hi;		    // high and low words of raw value (note: signed)
-	uint16_t err;			// error flags
-	float tc_temp;			// thermocouple temperature in deg C
-	float ref_temp;			// reference temperature in dec C
-
+	uint16_t err[4];   		// error flags
+	float tc_temp[4];		// thermocouple temperature in deg C
+	float ref_temp[4];		// reference temperature in dec C
+	uint32_t count;			// sample count
 
   /* USER CODE END 1 */
 
@@ -147,9 +147,12 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
+  count=0;
   while (1)
   {
-  	  /* turn on Green LED */
+	  count++;
+
+	  /* turn on Green LED */
 	  HAL_GPIO_WritePin(LED_GRN_GPIO_Port, LED_GRN_Pin, GPIO_PIN_SET);
 
 	  for(chan=0; chan<4; chan++)
@@ -159,30 +162,55 @@ int main(void)
 		  lo = n & 0xFFFF;
 		  hi = n >> 16;
 
-		  err = n & 0x07;
-		  if (err)
+		  err[chan] = n & 0x07;
+		  if (err[chan])
 		  {
-			  tc_temp = 0.00;
+			  tc_temp[chan] = 0.00;
 		  }
 		  else
 		  {
-			  tc_temp = ((float) (hi >> 2) ) / 4.0;
+			  tc_temp[chan] = ((float) (hi >> 2) ) / 4.0;
 		  }
 
-		  ref_temp = ((float) (lo >> 4) ) / 16.0;
+		  ref_temp[chan] = ((float) (lo >> 4) ) / 16.0;
 
-		  sprintf(msg, "%d: %04X %04X %6.2f %6.2f\r\n", chan, hi, lo, ref_temp, tc_temp);
+#if 0
+		  sprintf(msg, "%d: %04X %04X %1d %6.2f %6.2f\r\n", chan, hi, lo, err[chan], ref_temp[chan], tc_temp[chan]);
+		  HAL_UART_Transmit(&huart1, (uint8_t *) msg, strlen(msg), 1000);
+#endif
+	  }
+
+#if 1
+	  sprintf(msg, "%6d,", count);
+	  HAL_UART_Transmit(&huart1, (uint8_t *) msg, strlen(msg), 1000);
+
+	  for(chan=0; chan<4; chan++)
+	  {
+		  sprintf(msg, "%1d,", err[chan]);
+		  HAL_UART_Transmit(&huart1, (uint8_t *) msg, strlen(msg), 1000);
+	  }
+
+	  for(chan=0; chan<4; chan++)
+	  {
+		  sprintf(msg, "%6.2f,", ref_temp[chan]);
+		  HAL_UART_Transmit(&huart1, (uint8_t *) msg, strlen(msg), 1000);
+	  }
+
+	  for(chan=0; chan<4; chan++)
+	  {
+		  sprintf(msg, "%6.2f,", tc_temp[chan]);
 		  HAL_UART_Transmit(&huart1, (uint8_t *) msg, strlen(msg), 1000);
 	  }
 
 	  sprintf(msg, "\r\n");
 	  HAL_UART_Transmit(&huart1, (uint8_t *) msg, strlen(msg), 1000);
+#endif
 
 	  /* turn off Green LED */
 	  HAL_GPIO_WritePin(LED_GRN_GPIO_Port, LED_GRN_Pin, GPIO_PIN_RESET);
 
   	  /* wait a little bit */
-	  for (i=0; i<5000000L; i++);
+	  for (i=0; i<50000000L; i++);
 
   /* USER CODE END WHILE */
 
