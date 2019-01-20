@@ -210,7 +210,7 @@ int main(void)
 	  HAL_GPIO_WritePin(LED_GRN_GPIO_Port, LED_GRN_Pin, GPIO_PIN_RESET);
 
   	  /* wait a little bit */
-	  for (i=0; i<50000000L; i++);
+	  for (i=0; i<10000000L; i++);
 
   /* USER CODE END WHILE */
 
