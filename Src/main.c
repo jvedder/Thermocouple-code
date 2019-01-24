@@ -42,7 +42,7 @@
 #include "adc.h"
 #include "i2c.h"
 #include "spi.h"
-#include "usart.h"
+#include "uart.h"
 #include "usb.h"
 #include "gpio.h"
 
@@ -61,6 +61,10 @@ extern UART_HandleTypeDef huart1;
 //extern UART_HandleTypeDef huart2;
 #define MSG_SIZE 64
 static char msg[MSG_SIZE];
+
+#define LOBYTE(x)  (uint16_t)((x) & 0xFFFF)
+#define HIBYTE(x)  (uint16_t)((x) >> 16)
+
 
 /* USER CODE END PV */
 
