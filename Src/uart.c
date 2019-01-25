@@ -9,8 +9,10 @@
 /* Includes ------------------------------------------------------------------*/
 #include <string.h>
 #include <stdbool.h>
-#include "uart.h"
 #include "main.h"
+#include "gpio.h"
+#include "uart.h"
+
 //#include "stm32f0xx_hal.h"
 //#include "stm32f0xx_hal_uart.h"
 
@@ -20,7 +22,6 @@
 
 /* Private macros ------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
-static UART_HandleTypeDef *uart_handle = NULL;
 UART_Handle_t huart1;
 UART_Handle_t huart2;
 
@@ -44,24 +45,62 @@ static void UART_Init_Regs( UART_Handle_t *huart )
 	/* Disable UART to set config */
 	CLEAR_BIT(huart->Instance->CR1, USART_CR1_UE);
 
-	/* USART CR1 Config Register */
-	reg = (uint32_t)UART_WORDLENGTH_8B | UART_PARITY_NONE | UART_MODE_TX_RX | UART_OVERSAMPLING_16 | USART_CR1_RXNEIE;
+	/* USART CR1 Config Register
+	 * [28] M[1]   = 00: 1 Start bit, 8 data bits, n stop bits
+	 * [27] EOBIE  = 0: End of Block interrupt Disabled
+	 * [26] RTOIE  = 0: Receiver timeout interrupt Disabled
+	 * [25:21] DEAT[4:0] = 0: Drive Enable Assertion Time
+	 * [20:16] DEDT[4:0] = 0: Driver Enable De-assertion time
+	 * [15] OVER8  = 0: Over-sampling by 16
+	 * [14] CMIE   = 0: Character match interrupt disabled
+	 * [13] MME    = 0 Receiver in active mode (unmuted)
+	 * [12] M[0]   ==> See M[1] above
+	 * [11] WAKE:  = 0: Receiver wakeup from mute on idle line
+	 * [10] PCE    = 0: Parity Control Disabled
+	 * [9]  PS     = 0: Even Parity
+	 * [8]  PEIE:  = 0: Parity Error (PE) interrupt Disabled
+	 * [7]  TXEIE  = 0: Tx Empty (TXE) interrupt Disabled
+	 * [6]  TCIE   = 0: Tx complete interrupt Disabled
+	 * [5]  RXNEIE = 1: Rx Not Empty (RXNE) Interrupt Enabled
+	 * [4]  IDLEIE = 0: IDLE Interrupt Disabled
+	 * [3]  TE     = 1: Transmitter Enabled
+	 * [2]  RE     = 1; Receiver Enabled
+	 * [1]  UESM   = 0: USART not able to wake up the MCU from Stop mode
+	 * [0]  UE     = 1: USART enable
+	 * -----       -----
+	 * [31:0]      = 0x002C Disabled
+	 * [31:0]      = 0x002D Enabled
+	 *
+	 * */
+	reg = (uint32_t) USART_CR1_RXNEIE | USART_CR1_TE | USART_CR1_RE;
 	WRITE_REG(huart->Instance->CR1, reg);
 
-	/*USART CR2 Config register */
-	/* Configure the UART Stop Bits: Set STOP[13:12] bits according
-	* to huart->Init.StopBits value */
-	reg = (uint32_t) UART_STOPBITS_1;
-	WRITE_REG(huart->Instance->CR2, reg);
 
-	/* USART CR3 Config register */
-	reg = (uint32_t)UART_HWCONTROL_NONE | UART_ONE_BIT_SAMPLE_DISABLE ;
-	WRITE_REG(huart->Instance->CR3, reg);
+	/* USART CR2 Config register
+	 * [13:12] STOP[1:0] = 00; 1 Stop Bit
+	 * */
+	WRITE_REG(huart->Instance->CR2, 0x0000);
 
-	/* USART BRR Baud Rate Register */
-	/* 48MHz / 115.2K = 416.667 rounds to 417 */
+	/* USART CR3 Config register
+	 * [14] DEM   = 0: Driver enable mode disabled
+	 * [10] CTSIE = 0: CTS interrupt disabled
+	 * [9]  CTSE  = 0: CTS disabled
+	 * [8]  RTSE  = 0: RTS disabled
+	 * [0]  EIE   = 0: Error interrupt disabled
+	 * */
+	WRITE_REG(huart->Instance->CR3, 0x0000);
+
+	/* USART BRR Baud Rate Register
+	 * 48MHz / 115.2K = 416.667 rounds to 417
+	 * */
 	reg = (uint32_t) 417;
 	WRITE_REG(huart->Instance->BRR, reg);
+
+
+	/* USART ICR Interrupt Clear Flag register
+	 * Clear all flags
+	 */
+	WRITE_REG(huart->Instance->ICR, 0xFFFF);
 
 	/* Reset the RX FIFO */
 	huart->rx_fifo_in = 0;
@@ -120,7 +159,7 @@ void UART_Init( void )
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
 	/* Configure USART2 as UART2 */
-	huart1.Instance = USART2;
+	huart2.Instance = USART2;
 	UART_Init_Regs(&huart2);
 }
 

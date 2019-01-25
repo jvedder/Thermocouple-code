@@ -17,7 +17,6 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include <stdbool.h>
-#include "stm32f0xx_hal_def.h"
 #include "main.h"
 
 
@@ -52,6 +51,7 @@ void UART_Send( UART_Handle_t *huart, const char * msg );
 int16_t UART_Get( UART_Handle_t *huart );
 bool UART_IsRxOverflow( UART_Handle_t *huart );
 void UART_IRQHandler(UART_Handle_t *huart);
+
 
 
 #ifdef __cplusplus

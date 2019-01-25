@@ -57,8 +57,9 @@
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 
-extern UART_HandleTypeDef huart1;
-//extern UART_HandleTypeDef huart2;
+extern UART_Handle_t huart1;
+extern UART_Handle_t huart2;
+
 #define MSG_SIZE 64
 static char msg[MSG_SIZE];
 
@@ -121,7 +122,7 @@ int main(void)
   //MX_ADC_Init();
   //MX_I2C1_Init();
   MX_SPI1_Init();
-  MX_USART1_UART_Init();
+  UART_Init();
 
   //  Local Loopback on Tx and Rx on #1
   //  HAL_GPIO_WritePin(UART2_DE1_GPIO_Port, UART2_DE1_Pin, GPIO_PIN_SET);
@@ -135,8 +136,6 @@ int main(void)
   HAL_GPIO_WritePin(UART2_DE2_GPIO_Port, UART2_DE2_Pin, GPIO_PIN_RESET);
   HAL_GPIO_WritePin(UART2_RE2_N_GPIO_Port, UART2_RE2_N_Pin, GPIO_PIN_RESET);
 
-  MX_USART2_UART_Init();
-
   //MX_USB_PCD_Init();
 
   /* Initialize interrupts */
@@ -144,7 +143,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
     sprintf(msg, "\r\nHello World.\r\n");
-    HAL_UART_Transmit(&huart1, (uint8_t *) msg, strlen(msg), 1000);
+    UART_Send(&huart1, msg);
 
     /* USER CODE END 2 */
 
@@ -180,34 +179,34 @@ int main(void)
 
 #if 0
 		  sprintf(msg, "%d: %04X %04X %1d %6.2f %6.2f\r\n", chan, hi, lo, err[chan], ref_temp[chan], tc_temp[chan]);
-		  HAL_UART_Transmit(&huart1, (uint8_t *) msg, strlen(msg), 1000);
+		  UART_Send(&huart1, msg);
 #endif
 	  }
 
 #if 1
-	  sprintf(msg, "%6d,", count);
-	  HAL_UART_Transmit(&huart1, (uint8_t *) msg, strlen(msg), 1000);
+	  sprintf(msg, "%6ld,", count);
+	  UART_Send(&huart1, msg);
 
 	  for(chan=0; chan<4; chan++)
 	  {
 		  sprintf(msg, "%1d,", err[chan]);
-		  HAL_UART_Transmit(&huart1, (uint8_t *) msg, strlen(msg), 1000);
+		  UART_Send(&huart1, msg);
 	  }
 
 	  for(chan=0; chan<4; chan++)
 	  {
 		  sprintf(msg, "%6.2f,", ref_temp[chan]);
-		  HAL_UART_Transmit(&huart1, (uint8_t *) msg, strlen(msg), 1000);
+		  UART_Send(&huart1, msg);
 	  }
 
 	  for(chan=0; chan<4; chan++)
 	  {
 		  sprintf(msg, "%6.2f,", tc_temp[chan]);
-		  HAL_UART_Transmit(&huart1, (uint8_t *) msg, strlen(msg), 1000);
+		  UART_Send(&huart1, msg);
 	  }
 
 	  sprintf(msg, "\r\n");
-	  HAL_UART_Transmit(&huart1, (uint8_t *) msg, strlen(msg), 1000);
+	  UART_Send(&huart1, msg);
 #endif
 
 	  /* turn off Green LED */
