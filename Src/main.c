@@ -71,7 +71,7 @@ static char msg[MSG_SIZE];
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-// static void MX_NVIC_Init(void);
+static void MX_NVIC_Init(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
@@ -139,7 +139,8 @@ int main(void)
   //MX_USB_PCD_Init();
 
   /* Initialize interrupts */
-  //MX_NVIC_Init();
+  MX_NVIC_Init();
+
   /* USER CODE BEGIN 2 */
 
     sprintf(msg, "\r\nHello World.\r\n");
@@ -286,7 +287,6 @@ void SystemClock_Config(void)
   HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
 }
 
-#if 0
 
 /**
   * @brief NVIC Configuration.
@@ -302,7 +302,6 @@ static void MX_NVIC_Init(void)
   HAL_NVIC_EnableIRQ(USART2_IRQn);
 }
 
-#endif
 
 /* USER CODE BEGIN 4 */
 
