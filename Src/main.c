@@ -71,7 +71,7 @@ static char msg[MSG_SIZE];
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-// static void MX_NVIC_Init(void);
+static void MX_NVIC_Init(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
@@ -139,7 +139,8 @@ int main(void)
   //MX_USB_PCD_Init();
 
   /* Initialize interrupts */
-  //MX_NVIC_Init();
+  MX_NVIC_Init();
+
   /* USER CODE BEGIN 2 */
 
     sprintf(msg, "\r\nHello World.\r\n");
@@ -153,67 +154,38 @@ int main(void)
   count=0;
   while (1)
   {
-	  count++;
+	  int16_t c = UART_Get(&huart1);
 
-	  /* turn on Green LED */
-	  HAL_GPIO_WritePin(LED_GRN_GPIO_Port, LED_GRN_Pin, GPIO_PIN_SET);
-
-	  for(chan=0; chan<4; chan++)
+	  if (c > -1)
 	  {
-		  n = SPI_Read32(chan);
+		  /* turn on Green LED */
+		  HAL_GPIO_WritePin(LED_GRN_GPIO_Port, LED_GRN_Pin, GPIO_PIN_SET);
 
-		  lo = n & 0xFFFF;
-		  hi = n >> 16;
-
-		  err[chan] = n & 0x07;
-		  if (err[chan])
-		  {
-			  tc_temp[chan] = 0.00;
-		  }
-		  else
-		  {
-			  tc_temp[chan] = ((float) (hi >> 2) ) / 4.0;
-		  }
-
-		  ref_temp[chan] = ((float) (lo >> 4) ) / 16.0;
-
-#if 0
-		  sprintf(msg, "%d: %04X %04X %1d %6.2f %6.2f\r\n", chan, hi, lo, err[chan], ref_temp[chan], tc_temp[chan]);
+		  sprintf(msg, "Char: 0x%02X, Overflow: %d\r\n,", c, UART_IsRxOverflow(&huart1));
 		  UART_Send(&huart1, msg);
-#endif
+
+		  /* turn off Green LED */
+		  HAL_GPIO_WritePin(LED_GRN_GPIO_Port, LED_GRN_Pin, GPIO_PIN_RESET);
 	  }
 
-#if 1
-	  sprintf(msg, "%6ld,", count);
-	  UART_Send(&huart1, msg);
-
-	  for(chan=0; chan<4; chan++)
+	  if ( GPIO_PIN_RESET == HAL_GPIO_ReadPin(BTN_USER_GPIO_Port, BTN_USER_Pin) )
 	  {
-		  sprintf(msg, "%1d,", err[chan]);
+		  /* turn on Green LED */
+		  HAL_GPIO_WritePin(LED_GRN_GPIO_Port, LED_GRN_Pin, GPIO_PIN_SET);
+
+		  sprintf(msg, "rx_in=%d, rx_out=%d\r\n", huart1.rx_fifo_in, huart1.rx_fifo_out);
 		  UART_Send(&huart1, msg);
+
+	  	  /* wait a little bit */
+		  for (i=0; i<10000L; i++);
+
+		  /* turn off Green LED */
+		  HAL_GPIO_WritePin(LED_GRN_GPIO_Port, LED_GRN_Pin, GPIO_PIN_RESET);
 	  }
-
-	  for(chan=0; chan<4; chan++)
-	  {
-		  sprintf(msg, "%6.2f,", ref_temp[chan]);
-		  UART_Send(&huart1, msg);
-	  }
-
-	  for(chan=0; chan<4; chan++)
-	  {
-		  sprintf(msg, "%6.2f,", tc_temp[chan]);
-		  UART_Send(&huart1, msg);
-	  }
-
-	  sprintf(msg, "\r\n");
-	  UART_Send(&huart1, msg);
-#endif
-
-	  /* turn off Green LED */
-	  HAL_GPIO_WritePin(LED_GRN_GPIO_Port, LED_GRN_Pin, GPIO_PIN_RESET);
 
   	  /* wait a little bit */
-	  for (i=0; i<10000000L; i++);
+	  for (i=0; i<100000L; i++);
+
 
   /* USER CODE END WHILE */
 
@@ -286,7 +258,6 @@ void SystemClock_Config(void)
   HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
 }
 
-#if 0
 
 /**
   * @brief NVIC Configuration.
@@ -302,7 +273,6 @@ static void MX_NVIC_Init(void)
   HAL_NVIC_EnableIRQ(USART2_IRQn);
 }
 
-#endif
 
 /* USER CODE BEGIN 4 */
 

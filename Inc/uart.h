@@ -20,7 +20,7 @@
 #include "main.h"
 
 
-#define UART_RX_FIFO_LENGTH 32
+#define UART_RX_FIFO_LENGTH 16
 
 
 /* Exported types ------------------------------------------------------------*/

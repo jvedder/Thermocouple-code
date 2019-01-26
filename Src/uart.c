@@ -219,7 +219,7 @@ int16_t UART_Get( UART_Handle_t *huart )
 	int16_t c = -1;
 
 	/* get a byte from the fifo if not empty */
-	if (huart->rx_fifo_out != huart->rx_fifo_out)
+	if (huart->rx_fifo_in != huart->rx_fifo_out)
 	{
 		c = (int16_t) huart->rx_fifo[huart->rx_fifo_out];
 		huart->rx_fifo_out = (huart->rx_fifo_out+1) % UART_RX_FIFO_LENGTH;
