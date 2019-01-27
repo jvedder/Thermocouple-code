@@ -57,11 +57,15 @@
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 
-extern UART_Handle_t huart1;
-extern UART_Handle_t huart2;
+//extern UART_Handle_t huart1;
+//extern UART_Handle_t huart2;
 
 #define MSG_SIZE 64
 static char msg[MSG_SIZE];
+
+#define BUFFER_SIZE 16
+uint8_t buffer[BUFFER_SIZE];
+
 
 #define LOBYTE(x)  (uint16_t)((x) & 0xFFFF)
 #define HIBYTE(x)  (uint16_t)((x) >> 16)
@@ -90,14 +94,17 @@ static void MX_NVIC_Init(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-	volatile uint32_t i;	// timer loop
-	uint16_t chan;			// SPI1 Channel #
-	uint32_t n;				// raw value read from SPI MAX321855
-	int16_t lo, hi;		    // high and low words of raw value (note: signed)
-	uint16_t err[4];   		// error flags
-	float tc_temp[4];		// thermocouple temperature in deg C
-	float ref_temp[4];		// reference temperature in dec C
-	uint32_t count;			// sample count
+	volatile uint32_t timer;	// timer loop
+	uint16_t i;					// general purpose counter
+	uint16_t chan;				// SPI1 Channel #
+	uint32_t n;					// raw value read from SPI MAX321855
+	int16_t lo, hi;		    	// high and low words of raw value (note: signed)
+	uint16_t err[4];   			// error flags
+	float tc_temp[4];			// thermocouple temperature in deg C
+	float ref_temp[4];			// reference temperature in deg C
+	uint32_t count;				// sample count
+
+
 
   /* USER CODE END 1 */
 
@@ -120,7 +127,7 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   //MX_ADC_Init();
-  //MX_I2C1_Init();
+  MX_I2C1_Init();
   MX_SPI1_Init();
   UART_Init();
 
@@ -150,6 +157,35 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
+  /* turn on Red LED */
+  HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_SET);
+
+
+  // MAC48 PROM, I2C addr = 1011000x = 0xB0; Byte addr= 0x9A - 0x9F
+  buffer[0] = 0x9A;
+  HAL_I2C_Master_Transmit(&hi2c1, 0xB0, buffer, 1, 5000);
+
+  sprintf(msg, "i2c reg addr sent\r\n");
+  UART_Send(&huart1, msg);
+
+  // MAC48 PROM, I2C addr = 1011000x = 0xB0; Byte addr= 0x9A - 0x9F
+  for (i=0; i<BUFFER_SIZE; i++)
+  {
+	  buffer[i] = 0x00;
+  }
+  HAL_I2C_Master_Receive(&hi2c1, 0xB0, buffer, 6, 5000);
+
+  for (i=0; i<6; i++)
+  {
+	  sprintf(msg, "Byte[%02X] = %02X\r\n", (0x9A+i) , buffer[i]);
+	  UART_Send(&huart1, msg);
+  }
+
+
+  /* turn off Red LED */
+  HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_RESET);
+
 
   count=0;
   while (1)
@@ -214,7 +250,7 @@ int main(void)
 	  HAL_GPIO_WritePin(LED_GRN_GPIO_Port, LED_GRN_Pin, GPIO_PIN_RESET);
 
   	  /* wait a little bit */
-	  for (i=0; i<10000000L; i++);
+	  for (timer=0; timer<10000000L; timer++);
 
   /* USER CODE END WHILE */
 
