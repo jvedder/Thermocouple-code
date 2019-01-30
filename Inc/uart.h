@@ -47,8 +47,10 @@ extern UART_Handle_t huart2;
 
 /* Exported functions --------------------------------------------------------*/
 void UART_Init( void );
-void UART_Send( UART_Handle_t *huart, const char * msg );
 int16_t UART_Get( UART_Handle_t *huart );
+void UART_Put( UART_Handle_t *huart, const char C );
+void UART_Send( UART_Handle_t *huart, const char * msg );
+void UART_SendHex( UART_Handle_t *huart, uint32_t Data, uint16_t Digits );
 bool UART_IsRxOverflow( UART_Handle_t *huart );
 void UART_IRQHandler(UART_Handle_t *huart);
 

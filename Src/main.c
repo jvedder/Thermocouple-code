@@ -42,9 +42,11 @@
 #include "adc.h"
 #include "i2c.h"
 #include "spi.h"
-#include "uart.h"
 #include "usb.h"
 #include "gpio.h"
+
+#include "uart.h"
+#include "eeprom.h"
 
 /* USER CODE BEGIN Includes */
 
@@ -65,6 +67,7 @@ static char msg[MSG_SIZE];
 
 #define BUFFER_SIZE 16
 uint8_t buffer[BUFFER_SIZE];
+static char msg[MSG_SIZE];
 
 
 #define LOBYTE(x)  (uint16_t)((x) & 0xFFFF)
@@ -79,6 +82,8 @@ static void MX_NVIC_Init(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
+void sprintHex(char *msg, uint16_t data, uint16_t Digits);
+
 
 /* USER CODE END PFP */
 
@@ -95,7 +100,7 @@ int main(void)
 {
   /* USER CODE BEGIN 1 */
 	volatile uint32_t timer;	// timer loop
-	uint16_t i;					// general purpose counter
+	int16_t i, j;				// general purpose counter
 	uint16_t chan;				// SPI1 Channel #
 	uint32_t n;					// raw value read from SPI MAX321855
 	int16_t lo, hi;		    	// high and low words of raw value (note: signed)
@@ -103,6 +108,7 @@ int main(void)
 	float tc_temp[4];			// thermocouple temperature in deg C
 	float ref_temp[4];			// reference temperature in deg C
 	uint32_t count;				// sample count
+	HAL_StatusTypeDef status;	// return status
 
 
 
@@ -153,6 +159,9 @@ int main(void)
     sprintf(msg, "\r\nHello World.\r\n");
     UART_Send(&huart1, msg);
 
+    sprintf(msg, "Build: %s %s\r\n", __DATE__, __TIME__);
+    UART_Send(&huart1, msg);
+
     /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -161,30 +170,83 @@ int main(void)
   /* turn on Red LED */
   HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_SET);
 
-
-  // MAC48 PROM, I2C addr = 1011000x = 0xB0; Byte addr= 0x9A - 0x9F
-  buffer[0] = 0x9A;
-  HAL_I2C_Master_Transmit(&hi2c1, 0xB0, buffer, 1, 5000);
-
-  sprintf(msg, "i2c reg addr sent\r\n");
-  UART_Send(&huart1, msg);
-
-  // MAC48 PROM, I2C addr = 1011000x = 0xB0; Byte addr= 0x9A - 0x9F
-  for (i=0; i<BUFFER_SIZE; i++)
-  {
-	  buffer[i] = 0x00;
-  }
-  HAL_I2C_Master_Receive(&hi2c1, 0xB0, buffer, 6, 5000);
-
-  for (i=0; i<6; i++)
-  {
-	  sprintf(msg, "Byte[%02X] = %02X\r\n", (0x9A+i) , buffer[i]);
-	  UART_Send(&huart1, msg);
-  }
+	/* Display the MAC Address from the MAC48 EEPROM */
+  	EEPROM_ReadMac48( );
+	UART_Send(&huart1, "MAC: ");
+	for (i=0; i<6; i++)
+	{
+		if (i) UART_Put(&huart1, ':');
+		sprintf(msg, "%02X", EEPROM_buffer[i]);
+		UART_Send(&huart1, msg);
+	}
+	UART_Send(&huart1, "\r\n");
 
 
-  /* turn off Red LED */
-  HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_RESET);
+	/* Display the 128-bit Serial Number from MAC48 EEPROM */
+	EEPROM_ReadSN128();
+	UART_Send(&huart1, "SN : ");
+	for (i=0; i<16; i++)
+	{
+		sprintf(msg, "%02X", EEPROM_buffer[i]);
+		UART_Send(&huart1, msg);
+	}
+	UART_Send(&huart1, "\r\n");
+
+#if 0
+	/* Display the MCU's unique ID as hex */
+	UART_Send(&huart1, "MID: ");
+	for (i=11; i>=0; i--)
+	{
+		uint8_t reg = READ_REG(*(   (uint8_t *)(UID_BASE + i) ) );
+		sprintf(msg, "%02X", (int)reg );
+		UART_Send(&huart1, msg);
+	}
+	UART_Send(&huart1, "\r\n");
+
+
+	/* Display the MCU's unique ID as text */
+	UART_Send(&huart1, "MID: '");
+	for (i=11; i>=0; i--)
+	{
+		uint8_t reg = READ_REG(*( (uint8_t *)(UID_BASE + i) ));
+		if (i > 4)
+		{
+			UART_Put( &huart1, (char)reg );
+		}
+		else
+		{
+			sprintf(msg, "%02X", (int)reg );
+			UART_Send(&huart1, msg);
+		}
+	}
+	UART_Send(&huart1, "'\r\n");
+#endif
+
+	/* Display the MCU's unique ID as hex string */
+	sprintf(msg, "MID: %08lX%08lX%08lX\r\n", HAL_GetUIDw2(), HAL_GetUIDw1(), HAL_GetUIDw0() );
+	UART_Send(&huart1, msg);
+
+	/* display blocks 0 to 15 */
+	for (j=0; j<15; j++)
+	{
+		status = EEPROM_ReadBlock(j);
+		if (HAL_OK != status)
+		{
+			sprintf(msg, "Read Status: %d\r\n", (int) status);
+			UART_Send(&huart1, msg);
+		}
+		sprintf(msg, "BLK[%02X]: ", j);
+		UART_Send(&huart1, msg);
+		for (i=0; i<16; i++)
+		{
+			sprintf(msg, "%02X", EEPROM_buffer[i]);
+			UART_Send(&huart1, msg);
+		}
+		UART_Send(&huart1, "\r\n");
+	}
+
+	/* turn off Red LED */
+	HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_RESET);
 
 
   count=0;

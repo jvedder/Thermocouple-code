@@ -165,57 +165,14 @@ void UART_Init( void )
 
 
 /**
-  * @brief Send a null terminated string in blocking mode.
-  * @param huart UART handle.
-  * @param msg Pointer to string to transmit. Must be null terminated
-  * @retval none
-  */
-void UART_Send( UART_Handle_t *huart, const char * msg )
-{
-	assert_param(huart != NULL);
-	assert_param(msg != NULL);
-
-	uint32_t timeout;
-
-	while(*msg)
-	{
-		/* Start USART Tx transmission */
-		huart->Instance->TDR = *msg;
-
-		/* TODO: Wait for TXE set instead of TC.
-		 * TXE clears on the next write to TDR.
-		 * Eliminates waiting for last byte to Tx,
-		 * but need to check no Tx in process on entry.
-		 * Unclear if TXE will be set on startup.
-		 */
-
-		/* Wait for Tx transfer complete up to timeout */
-		timeout = 50000L;
-		while ( ((huart->Instance->ISR & USART_ISR_TC) == 0) && (timeout > 0))
-		{
-			timeout--;
-		}
-
-		if (timeout == 0)
-		{
-			huart-> tx_errors++;
-		}
-
-		/* Clear Tx transfer complete flag */
-		huart->Instance->ICR |= USART_ICR_TCCF;
-
-		/* move to the next character */
-		msg++;
-	}
-}
-
-/**
   * @brief Get one character from the UART receive buffer or -1 if it is empty. Does not block.
   * @param huart UART handle.
   * @retval The next character or -1
   */
 int16_t UART_Get( UART_Handle_t *huart )
 {
+	assert_param(huart != NULL);
+
 	int16_t c = -1;
 
 	/* get a byte from the fifo if not empty */
@@ -226,6 +183,88 @@ int16_t UART_Get( UART_Handle_t *huart )
 	}
 	return c;
 }
+
+/**
+  * @brief Send a null terminated string in blocking mode.
+  * @param huart UART handle.
+  * @param msg Pointer to string to transmit. Must be null terminated
+  * @retval none
+  */
+void UART_Put( UART_Handle_t *huart, const char Ch )
+{
+	assert_param(huart != NULL);
+
+	/* TODO: Consider this change:
+	 * Wait for TXE set instead of TC.
+	 * TXE clears on the next write to TDR.
+	 * Eliminates waiting for last byte to Tx,
+	 * but need to check no Tx in process on entry.
+	 * Unclear if TXE will be set on startup.
+	 */
+
+	/* Start USART Tx transmission */
+	huart->Instance->TDR = Ch;
+
+	/* Wait for Tx transfer complete up to timeout */
+	uint16_t timeout = 50000L;
+	while ( ((huart->Instance->ISR & USART_ISR_TC) == 0) && (timeout > 0))
+	{
+		timeout--;
+	}
+
+	if (timeout == 0)
+	{
+		huart-> tx_errors++;
+	}
+
+	/* Clear Tx transfer complete flag */
+	huart->Instance->ICR |= USART_ICR_TCCF;
+}
+
+/**
+  * @brief Send a null terminated string in blocking mode.
+  * @param huart UART handle.
+  * @param msg Pointer to string to transmit. Must be null terminated
+  * @retval none
+  */
+void UART_Send( UART_Handle_t *huart, const char * msg )
+{
+	assert_param(huart != NULL);
+	assert_param(msg != NULL);
+
+	while(*msg)
+	{
+		UART_Put(huart, *msg);
+		msg++;
+	}
+}
+
+#if 0
+//
+// Does not work correctly
+//
+void UART_SendHex( UART_Handle_t *huart, uint32_t Data, uint16_t Digits )
+{
+	assert_param(huart != NULL);
+	assert_param( (0 < Digits) && (Digits < 17) );
+
+	while (Digits)
+	{
+		/* Grab the most significant nibble */
+		char c = (Data >> ((Digits-1) * 4)) & 0x000F;
+
+		/* convert to hex and send it */
+		c += ( (c < 10) ? '0' : ('A'-1) );
+		UART_Put( huart, c);
+
+		/* shift data by a nibble */
+		Data >>= 4;
+
+		/* move index towards lsb */
+		Digits--;
+	}
+}
+#endif
 
 
 
