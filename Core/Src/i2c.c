@@ -78,17 +78,31 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef* i2cHandle)
 
   /* USER CODE END I2C1_MspInit 0 */
 
-    __HAL_RCC_GPIOB_CLK_ENABLE();
+#ifdef PCB100
+      /**I2C1 GPIO Configuration
+      PA9     ------> I2C1_SCL
+      PA10     ------> I2C1_SDA
+      */
+      __HAL_RCC_GPIOA_CLK_ENABLE();
+      GPIO_InitStruct.Pin = I2C_SCL_Pin|I2C_SDA_Pin;
+      GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
+      GPIO_InitStruct.Pull = GPIO_PULLUP;
+      GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+      GPIO_InitStruct.Alternate = GPIO_AF4_I2C1;
+      HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+#else
     /**I2C1 GPIO Configuration
     PB6     ------> I2C1_SCL
     PB7     ------> I2C1_SDA
     */
+      __HAL_RCC_GPIOB_CLK_ENABLE();
     GPIO_InitStruct.Pin = I2C_SCL_Pin|I2C_SDA_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
     GPIO_InitStruct.Pull = GPIO_PULLUP;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
     GPIO_InitStruct.Alternate = GPIO_AF1_I2C1;
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+#endif
 
     /* I2C1 clock enable */
     __HAL_RCC_I2C1_CLK_ENABLE();

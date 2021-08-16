@@ -1,10 +1,36 @@
 /**
-  ******************************************************************************
-  * @file    uart.c
-  * @author  John Vedder
-  * @brief   My UART Driver module. Replaces stm32f0xx_hal_uart.c/.h
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    uart.c
+ * @author  John Vedder
+ * @brief   My UART Driver module. Replaces stm32f0xx_hal_uart.c/.h
+ ******************************************************************************
+ */
+/**
+ ******************************************************************************
+ * MIT License
+ *
+ * Copyright (c) 2021 John Vedder
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this hardware, software, and associated documentation files (the "Product"),
+ * to deal in the Product without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Product, and to permit persons to whom the Product is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Product.
+ *
+ * THE PRODUCT IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE PRODUCT OR THE USE OR OTHER DEALINGS IN THE
+ * PRODUCT.
+ *
+ ******************************************************************************
+ */
 
 /* Includes ------------------------------------------------------------------*/
 #include <string.h>
@@ -22,8 +48,8 @@
 
 /* Private macros ------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
-UART_Handle_t huart1;
-UART_Handle_t huart2;
+UART_FIFO_Handle_t huart1;
+UART_FIFO_Handle_t huart2;
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -36,7 +62,7 @@ UART_Handle_t huart2;
   * @param huart UART handle.
   * @retval none
   */
-static void UART_Init_Regs( UART_Handle_t *huart )
+static void UART_Init_Regs( UART_FIFO_Handle_t *huart )
 {
 	uint32_t reg;
 
@@ -45,7 +71,18 @@ static void UART_Init_Regs( UART_Handle_t *huart )
 	/* Disable UART to set config */
 	CLEAR_BIT(huart->Instance->CR1, USART_CR1_UE);
 
-	/* USART CR1 Config Register
+
+	/**
+	 * Configure as UART with:
+	 *  - 115,200 baud rate
+     *  - 1 Start bit, 8 data bits, No parity, 1 stop bit (8N1)
+     *  - Receiver Enabled
+     *  - Transmitter Enabled
+     *  - RX Not Empty (RXNE) Interrupt Enabled
+	 */
+
+
+	/* USART CR1 Config Register:
 	 * [28] M[1]   = 00: 1 Start bit, 8 data bits, n stop bits
 	 * [27] EOBIE  = 0: End of Block interrupt Disabled
 	 * [26] RTOIE  = 0: Receiver timeout interrupt Disabled
@@ -96,7 +133,6 @@ static void UART_Init_Regs( UART_Handle_t *huart )
 	reg = (uint32_t) 417;
 	WRITE_REG(huart->Instance->BRR, reg);
 
-
 	/* USART ICR Interrupt Clear Flag register
 	 * Clear all flags
 	 */
@@ -126,17 +162,33 @@ void UART_Init( void )
 	/* USART1 clock enable */
 	__HAL_RCC_USART1_CLK_ENABLE();
 
+#ifdef PCB100
 	/**
      * UART1 GPIO Configuration
      * PB6 --> USART1_TX
      * PB7 --> USART1_RX
     */
+    __HAL_RCC_GPIOB_CLK_ENABLE();
     GPIO_InitStruct.Pin = UART1_TX_Pin|UART1_RX_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
     GPIO_InitStruct.Alternate = GPIO_AF0_USART1;
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+#else
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+    /**USART1 GPIO Configuration
+    PA9     ------> USART1_TX
+    PA10    ------> USART1_RX
+    */
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+    GPIO_InitStruct.Pin = UART1_TX_Pin|UART1_RX_Pin;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+    GPIO_InitStruct.Alternate = GPIO_AF1_USART1;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+#endif
 
 	/* Configure USART1 as UART1 */
 	huart1.Instance = USART1;
@@ -163,17 +215,16 @@ void UART_Init( void )
 	UART_Init_Regs(&huart2);
 }
 
-
 /**
   * @brief Get one character from the UART receive buffer or -1 if it is empty. Does not block.
   * @param huart UART handle.
-  * @retval The next character or -1
+  * @retval The next character or -1 to indicate buffer is empty
   */
-int16_t UART_Get( UART_Handle_t *huart )
+int16_t UART_Get( UART_FIFO_Handle_t *huart )
 {
 	assert_param(huart != NULL);
 
-	int16_t c = -1;
+	int16_t c = -1;  /* -1 means no character available */
 
 	/* get a byte from the fifo if not empty */
 	if (huart->rx_fifo_in != huart->rx_fifo_out)
@@ -190,31 +241,31 @@ int16_t UART_Get( UART_Handle_t *huart )
   * @param msg Pointer to string to transmit. Must be null terminated
   * @retval none
   */
-void UART_Put( UART_Handle_t *huart, const char Ch )
+void UART_Put( UART_FIFO_Handle_t *huart, const char ch )
 {
 	assert_param(huart != NULL);
 
 	/* TODO: Consider this change:
 	 * Wait for TXE set instead of TC.
 	 * TXE clears on the next write to TDR.
-	 * Eliminates waiting for last byte to Tx,
+	 * This eliminates waiting for last byte to Tx,
 	 * but need to check no Tx in process on entry.
 	 * Unclear if TXE will be set on startup.
 	 */
 
 	/* Start USART Tx transmission */
-	huart->Instance->TDR = Ch;
+	huart->Instance->TDR = ch;
 
-	/* Wait for Tx transfer complete up to timeout */
-	uint16_t timeout = 50000L;
-	while ( ((huart->Instance->ISR & USART_ISR_TC) == 0) && (timeout > 0))
+	/* Wait for Tx transfer complete up to 100 mS timeout */
+	uint32_t start = HAL_GetTick();
+	while ( ((huart->Instance->ISR & USART_ISR_TC) == 0) )
 	{
-		timeout--;
-	}
-
-	if (timeout == 0)
-	{
-		huart-> tx_errors++;
+	    if ((HAL_GetTick() - start) > 100)
+        {
+	        huart-> tx_errors++;
+	        break;
+	    }
+		//spin wait
 	}
 
 	/* Clear Tx transfer complete flag */
@@ -227,7 +278,7 @@ void UART_Put( UART_Handle_t *huart, const char Ch )
   * @param msg Pointer to string to transmit. Must be null terminated
   * @retval none
   */
-void UART_Send( UART_Handle_t *huart, const char * msg )
+void UART_Send( UART_FIFO_Handle_t *huart, const char * msg )
 {
 	assert_param(huart != NULL);
 	assert_param(msg != NULL);
@@ -243,7 +294,7 @@ void UART_Send( UART_Handle_t *huart, const char * msg )
 //
 // Does not work correctly
 //
-void UART_SendHex( UART_Handle_t *huart, uint32_t Data, uint16_t Digits )
+void UART_SendHex( UART_FIFO_Handle_t *huart, uint32_t Data, uint16_t Digits )
 {
 	assert_param(huart != NULL);
 	assert_param( (0 < Digits) && (Digits < 17) );
@@ -268,7 +319,7 @@ void UART_SendHex( UART_Handle_t *huart, uint32_t Data, uint16_t Digits )
 
 
 
-bool UART_IsRxOverflow( UART_Handle_t *huart )
+bool UART_IsRxOverflow( UART_FIFO_Handle_t *huart )
 {
 	/* Capture the value before clearing it */
 	bool ret = huart->rx_overflow;
@@ -281,7 +332,7 @@ bool UART_IsRxOverflow( UART_Handle_t *huart )
   * @param huart UART handle.
   * @retval None
   */
-void UART_IRQHandler(UART_Handle_t *huart)
+void UART_FIFO_IRQHandler(UART_FIFO_Handle_t *huart)
 {
 	/* get ISR and CR1 flags */
 	uint32_t isrflags   = READ_REG(huart->Instance->ISR);

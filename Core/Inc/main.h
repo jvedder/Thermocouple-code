@@ -58,6 +58,14 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+
+/**
+ * Select PCB design -- only enable 1 of the following:
+ */
+//#define PCB100 1
+#define PCB101 1
+
+
 #define OSC_IN_Pin GPIO_PIN_0
 #define OSC_IN_GPIO_Port GPIOF
 #define OSC_OUT_Pin GPIO_PIN_1
@@ -85,10 +93,17 @@ void Error_Handler(void);
 #define LED_GRN_Pin GPIO_PIN_8
 #define LED_GRN_GPIO_Port GPIOA
 
+#ifdef PCB100
+#define I2C_SCL_Pin GPIO_PIN_9
+#define I2C_SCL_GPIO_Port GPIOA
+#define I2C_SDA_Pin GPIO_PIN_10
+#define I2C_SDA_GPIO_Port GPIOA
+#else
 #define UART1_TX_Pin GPIO_PIN_9
 #define UART1_TX_GPIO_Port GPIOA
 #define UART1_RX_Pin GPIO_PIN_10
 #define UART1_RX_GPIO_Port GPIOA
+#endif
 
 #define USB_DM_Pin GPIO_PIN_11
 #define USB_DM_GPIO_Port GPIOA
@@ -107,10 +122,17 @@ void Error_Handler(void);
 #define SPI_CS2_N_Pin GPIO_PIN_5
 #define SPI_CS2_N_GPIO_Port GPIOB
 
+#ifdef PCB100
+#define UART1_TX_Pin GPIO_PIN_6
+#define UART1_TX_GPIO_Port GPIOB
+#define UART1_RX_Pin GPIO_PIN_7
+#define UART1_RX_GPIO_Port GPIOB
+#else
 #define I2C_SCL_Pin GPIO_PIN_6
 #define I2C_SCL_GPIO_Port GPIOB
 #define I2C_SDA_Pin GPIO_PIN_7
 #define I2C_SDA_GPIO_Port GPIOB
+#endif
 
 #define BTN_USER_Pin GPIO_PIN_8
 #define BTN_USER_GPIO_Port GPIOB
