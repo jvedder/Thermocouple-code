@@ -128,8 +128,12 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef* i2cHandle)
     __HAL_RCC_I2C1_CLK_DISABLE();
 
     /**I2C1 GPIO Configuration
-    PB6     ------> I2C1_SCL
-    PB7     ------> I2C1_SDA
+    PCB100:
+      PB6     ------> I2C1_SCL
+      PB7     ------> I2C1_SDA
+    PCB101:
+      PB6     ------> I2C1_SCL
+      PB7     ------> I2C1_SDA
     */
     HAL_GPIO_DeInit(I2C_SCL_GPIO_Port, I2C_SCL_Pin);
 

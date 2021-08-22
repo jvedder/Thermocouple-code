@@ -264,12 +264,13 @@ int main( void )
 
 #if 1
 		  //sprintf(msg, "%d: %04X %04X %1d %d %d\r\n", chan, hi, lo, err[chan], ref_temp[chan], tc_temp[chan]);
-          sprintf(msg, "%d: %04X %04X %1d", chan, hi, lo, err[chan]);
+          sprintf(msg, "%d: %04X_%04X,%1d,", chan, hi, lo, err[chan]);
 		  UART_Send(&huart1, msg);
           PrintQuarter(&huart1, ref_temp[chan]/4);
-          UART_Send(&huart1, ", ");
+          UART_Send(&huart1, ",");
           PrintQuarter(&huart1, tc_temp[chan]);
           UART_Send(&huart1, "\r\n");
+          if (chan == 3) UART_Send(&huart1, "\r\n");
 #endif
         }
 
@@ -403,7 +404,7 @@ void PrintQuarter( UART_FIFO_Handle_t *huart, int16_t value )
 {
     // TODO: This probably does not work for negative values
 
-    sprintf( msg, "%d,", (uint16_t) (value/4) );
+    sprintf( msg, "%d", (uint16_t) (value/4) );
     UART_Send( huart, msg );
     switch (value & 3)
     {
