@@ -1,27 +1,28 @@
 /* USER CODE BEGIN Header */
 /**
- ******************************************************************************
- * @file           : main.c
- * @brief          : Main program body
- ******************************************************************************
- * @attention
- *
- * <h2><center>&copy; Copyright (c) 2021 STMicroelectronics.
- * All rights reserved.</center></h2>
- *
- * This software component is licensed by ST under BSD 3-Clause license,
- * the "License"; You may not use this file except in compliance with the
- * License. You may obtain a copy of the License at:
- *                        opensource.org/licenses/BSD-3-Clause
- *
- ******************************************************************************
- */
+  ******************************************************************************
+  * @file           : main.c
+  * @brief          : Main program body
+  ******************************************************************************
+  * @attention
+  *
+  * <h2><center>&copy; Copyright (c) 2021 STMicroelectronics.
+  * All rights reserved.</center></h2>
+  *
+  * This software component is licensed by ST under BSD 3-Clause license,
+  * the "License"; You may not use this file except in compliance with the
+  * License. You may obtain a copy of the License at:
+  *                        opensource.org/licenses/BSD-3-Clause
+  *
+  ******************************************************************************
+  */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "adc.h"
 #include "i2c.h"
 #include "spi.h"
+#include "tim.h"
 // #include "usart.h"
 #include "usb.h"
 #include "gpio.h"
@@ -135,6 +136,8 @@ int main( void )
     HAL_GPIO_WritePin( UART2_RE2_N_GPIO_Port, UART2_RE2_N_Pin, GPIO_PIN_RESET );
 
     //MX_USB_PCD_Init();
+    MX_TIM2_Init();
+    HAL_TIM_Base_Start(&htim2);
 
     /* Initialize interrupts */
     MX_NVIC_Init( );
@@ -241,6 +244,9 @@ int main( void )
         /* turn on Green LED */
         HAL_GPIO_WritePin( LED_GRN_GPIO_Port, LED_GRN_Pin, GPIO_PIN_SET );
 
+
+        uint32_t start = htim2.Instance->CNT;
+
         for ( chan = 0; chan < 4; chan++ )
         {
             n = SPI_Read32( chan );
@@ -261,8 +267,24 @@ int main( void )
 
             /* Note: use lo/16, not lo>>4, because >> may not sign extend */
             ref_temp[chan] = ( (int16_t)lo /16 );   // 12-bit, 1 LSB = 1/16 degree C
+        }
+
+        uint32_t finish = htim2.Instance->CNT;
 
 #if 1
+        sprintf(msg, "Start: %lu\r\n", start);
+        UART_Send(&huart1, msg);
+        sprintf(msg, "End:   %lu\r\n", finish);
+        UART_Send(&huart1, msg);
+        sprintf(msg, "Delta: %lu\r\n", finish - start);
+        UART_Send(&huart1, msg);
+
+        /*
+         * This loop takes 3608 ticks of 48MHz = 75.167 uSec
+         */
+
+        for ( chan = 0; chan < 4; chan++ )
+        {
 		  //sprintf(msg, "%d: %04X %04X %1d %d %d\r\n", chan, hi, lo, err[chan], ref_temp[chan], tc_temp[chan]);
           sprintf(msg, "%d: %04X_%04X,%1d,", chan, hi, lo, err[chan]);
 		  UART_Send(&huart1, msg);
@@ -271,8 +293,8 @@ int main( void )
           PrintQuarter(&huart1, tc_temp[chan]);
           UART_Send(&huart1, "\r\n");
           if (chan == 3) UART_Send(&huart1, "\r\n");
-#endif
         }
+#endif
 
 #if 0
         sprintf( msg, "%06ld,", count );
@@ -319,12 +341,9 @@ int main( void )
  */
 void SystemClock_Config( void )
 {
-    RCC_OscInitTypeDef RCC_OscInitStruct =
-    { 0 };
-    RCC_ClkInitTypeDef RCC_ClkInitStruct =
-    { 0 };
-    RCC_PeriphCLKInitTypeDef PeriphClkInit =
-    { 0 };
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
     /** Initializes the RCC Oscillators according to the specified parameters
      * in the RCC_OscInitTypeDef structure.
