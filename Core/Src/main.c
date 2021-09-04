@@ -20,18 +20,18 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "adc.h"
+#include "dma.h"
 #include "i2c.h"
 #include "spi.h"
 #include "tim.h"
-// #include "usart.h"
-#include "usb.h"
+#include "usart.h"
+//#include "app_usb.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 
 /* USER CODE BEGIN Includes */
 
-#include "uart.h"
 #include "eeprom.h"
 #include <string.h>
 #include <stdio.h>
@@ -57,10 +57,9 @@
 /* USER CODE BEGIN PV */
 
 #define MSG_SIZE 64
-static char msg[MSG_SIZE];
+//static char msg[MSG_SIZE];
 #define BUFFER_SIZE 16
 uint8_t buffer[BUFFER_SIZE];
-static char msg[MSG_SIZE];
 #define LOBYTE(x)  (uint16_t)((x) & 0xFFFF)
 #define HIBYTE(x)  (uint16_t)((x) >> 16)
 /* USER CODE END PV */
@@ -70,7 +69,7 @@ void SystemClock_Config( void );
 static void MX_NVIC_Init( void );
 /* USER CODE BEGIN PFP */
 void Delay_ms(uint32_t delay_ms);
-void PrintQuarter( UART_FIFO_Handle_t *huart, int16_t value );
+void PrintQuarter( int16_t value );
 
 /* USER CODE END PFP */
 
@@ -115,14 +114,13 @@ int main( void )
     /* USER CODE END SysInit */
 
     /* Initialize all configured peripherals */
-    //MX_USART2_UART_Init();
+    MX_USART2_UART_Init();
     MX_GPIO_Init( );
     MX_ADC_Init( );
     MX_I2C1_Init( );
     MX_SPI1_Init( );
-    //MX_USART1_UART_Init();
-    UART_Init( );
-
+    MX_USART1_UART_Init();
+ 
     //  Local Loopback on Tx and Rx on #1
     //  HAL_GPIO_WritePin(UART2_DE1_GPIO_Port, UART2_DE1_Pin, GPIO_PIN_SET);
     //  HAL_GPIO_WritePin(UART2_RE1_N_GPIO_Port, UART2_RE1_N_Pin, GPIO_PIN_RESET);
@@ -136,6 +134,7 @@ int main( void )
     HAL_GPIO_WritePin( UART2_RE2_N_GPIO_Port, UART2_RE2_N_Pin, GPIO_PIN_RESET );
 
     //MX_USB_PCD_Init();
+    MX_DMA_Init();
     MX_TIM2_Init();
     HAL_TIM_Base_Start(&htim2);
 
@@ -144,11 +143,9 @@ int main( void )
 
     /* USER CODE BEGIN 2 */
 
-    sprintf( msg, "\r\nHello World.\r\n" );
-    UART_Send( &huart1, msg );
+    printf( "\r\nHello World.\r\n" );
 
-    sprintf( msg, "Build: %s %s\r\n", __DATE__, __TIME__ );
-    UART_Send( &huart1, msg );
+    printf( "Build: %s %s\r\n", __DATE__, __TIME__ );
 
     /* USER CODE END 2 */
 
@@ -160,59 +157,54 @@ int main( void )
 
     /* Display the MAC Address from the MAC48 EEPROM */
     EEPROM_ReadMac48( );
-    UART_Send( &huart1, "MAC: " );
+    printf("MAC: " );
     for ( i = 0; i < 6; i++ )
     {
-        if ( i ) UART_Put( &huart1, ':' );
-        sprintf( msg, "%02X", EEPROM_buffer[i] );
-        UART_Send( &huart1, msg );
+        if ( i ) printf(":");
+        printf( "%02X", EEPROM_buffer[i] );
     }
-    UART_Send( &huart1, "\r\n" );
+    printf("\r\n" );
 
     /* Display the 128-bit Serial Number from MAC48 EEPROM */
     EEPROM_ReadSN128( );
-    UART_Send( &huart1, "SN: " );
+    printf( "SN: " );
     for ( i = 0; i < 16; i++ )
     {
-        sprintf( msg, "%02X", EEPROM_buffer[i] );
-        UART_Send( &huart1, msg );
+        printf( "%02X", EEPROM_buffer[i] );
     }
-    UART_Send( &huart1, "\r\n" );
+    printf( "\r\n" );
 
 #if 0
 	/* Display the MCU's unique ID as hex */
-	UART_Send(&huart1, "MCU ID: ");
+	printf( "MCU ID: ");
 	for (i=11; i>=0; i--)
 	{
 		uint8_t reg = READ_REG(*(   (uint8_t *)(UID_BASE + i) ) );
-		sprintf(msg, "%02X", (int)reg );
-		UART_Send(&huart1, msg);
+		printf( "%02X", (int)reg );
 	}
-	UART_Send(&huart1, "\r\n");
+	printf("\r\n");
 
 
 	/* Display the MCU's unique ID as text */
-	UART_Send(&huart1, "MCU ID: '");
+	printf("MCU ID: '");
 	for (i=11; i>=0; i--)
 	{
 		uint8_t reg = READ_REG(*( (uint8_t *)(UID_BASE + i) ));
 		if (i > 4)
 		{
-			UART_Put( &huart1, (char)reg );
+			printf("%c", (char)reg );
 		}
 		else
 		{
-			sprintf(msg, "%02X", (int)reg );
-			UART_Send(&huart1, msg);
+			printf("%02X", (int)reg );
 		}
 	}
-	UART_Send(&huart1, "'\r\n");
+	printf("'\r\n");
 #endif
 
     /* Display the MCU's unique ID as hex string */
-    sprintf( msg, "MCU ID: %08lX%08lX%08lX\r\n", HAL_GetUIDw2( ), HAL_GetUIDw1( ),
+    printf( "MCU ID: %08lX%08lX%08lX\r\n", HAL_GetUIDw2( ), HAL_GetUIDw1( ),
             HAL_GetUIDw0( ) );
-    UART_Send( &huart1, msg );
 
     /* display blocks 0 to 15 */
     for ( j = 0; j < 15; j++ )
@@ -220,17 +212,14 @@ int main( void )
         status = EEPROM_ReadBlock( j );
         if ( HAL_OK != status )
         {
-            sprintf( msg, "Read Status: %d\r\n", (int) status );
-            UART_Send( &huart1, msg );
+            printf( "Read Status: %d\r\n", (int) status );
         }
-        sprintf( msg, "BLK[%02X]: ", j );
-        UART_Send( &huart1, msg );
+        printf( "BLK[%02X]: ", j );
         for ( i = 0; i < 16; i++ )
         {
-            sprintf( msg, "%02X", EEPROM_buffer[i] );
-            UART_Send( &huart1, msg );
+            printf( "%02X", EEPROM_buffer[i] );
         }
-        UART_Send( &huart1, "\r\n" );
+        printf( "\r\n" );
     }
 
     /* turn off Red LED */
@@ -272,12 +261,9 @@ int main( void )
         uint32_t finish = htim2.Instance->CNT;
 
 #if 1
-        sprintf(msg, "Start: %lu\r\n", start);
-        UART_Send(&huart1, msg);
-        sprintf(msg, "End:   %lu\r\n", finish);
-        UART_Send(&huart1, msg);
-        sprintf(msg, "Delta: %lu\r\n", finish - start);
-        UART_Send(&huart1, msg);
+        printf( "Start: %lu\r\n", start);
+        printf( "End:   %lu\r\n", finish);
+        printf( "Delta: %lu\r\n", finish - start);
 
         /*
          * This loop takes 3608 ticks of 48MHz = 75.167 uSec
@@ -286,40 +272,33 @@ int main( void )
         for ( chan = 0; chan < 4; chan++ )
         {
 		  //sprintf(msg, "%d: %04X %04X %1d %d %d\r\n", chan, hi, lo, err[chan], ref_temp[chan], tc_temp[chan]);
-          sprintf(msg, "%d: %04X_%04X,%1d,", chan, hi, lo, err[chan]);
-		  UART_Send(&huart1, msg);
-          PrintQuarter(&huart1, ref_temp[chan]/4);
-          UART_Send(&huart1, ",");
-          PrintQuarter(&huart1, tc_temp[chan]);
-          UART_Send(&huart1, "\r\n");
-          if (chan == 3) UART_Send(&huart1, "\r\n");
+          printf("%d: %04X_%04X,%1d,", chan, hi, lo, err[chan]);
+          PrintQuarter(ref_temp[chan]/4);
+          printf(",");
+          PrintQuarter(tc_temp[chan]);
+          if (chan == 3) printf("\r\n");
         }
 #endif
 
 #if 0
-        sprintf( msg, "%06ld,", count );
-        UART_Send( &huart1, msg );
+        printf( "%06ld,", count );
 
         for ( chan = 0; chan < 4; chan++ )
         {
-            sprintf( msg, "%1d,", err[chan] );
-            UART_Send( &huart1, msg );
+            printf( "%1d,", err[chan] );
         }
 
         for ( chan = 0; chan < 4; chan++ )
         {
-            sprintf( msg, "%d,", ref_temp[chan] );
-            UART_Send( &huart1, msg );
+            printf( "%d,", ref_temp[chan] );
         }
 
         for ( chan = 0; chan < 4; chan++ )
         {
-            sprintf( msg, "%6d,", tc_temp[chan] );
-            UART_Send( &huart1, msg );
+            printf( "%6d,", tc_temp[chan] );
         }
 
-        sprintf( msg, "\r\n" );
-        UART_Send( &huart1, msg );
+        printf( "\r\n" );
 #endif
 
         /* turn off Green LED */
@@ -348,8 +327,8 @@ void SystemClock_Config( void )
     /** Initializes the RCC Oscillators according to the specified parameters
      * in the RCC_OscInitTypeDef structure.
      */
-    RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI
-            | RCC_OSCILLATORTYPE_HSI14 | RCC_OSCILLATORTYPE_HSI48;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_HSI14
+                              |RCC_OSCILLATORTYPE_HSI48;
     RCC_OscInitStruct.HSIState = RCC_HSI_ON;
     RCC_OscInitStruct.HSI48State = RCC_HSI48_ON;
     RCC_OscInitStruct.HSI14State = RCC_HSI14_ON;
@@ -372,8 +351,8 @@ void SystemClock_Config( void )
     {
         Error_Handler( );
     }
-    PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USB
-            | RCC_PERIPHCLK_USART1 | RCC_PERIPHCLK_I2C1;
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USB|RCC_PERIPHCLK_USART1
+                              |RCC_PERIPHCLK_I2C1;
     PeriphClkInit.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK1;
     PeriphClkInit.I2c1ClockSelection = RCC_I2C1CLKSOURCE_HSI;
     PeriphClkInit.UsbClockSelection = RCC_USBCLKSOURCE_HSI48;
@@ -419,25 +398,24 @@ void Delay_ms(uint32_t delay_ms)
 /**
  * Prints an integer value divided by 4.
  */
-void PrintQuarter( UART_FIFO_Handle_t *huart, int16_t value )
+void PrintQuarter( int16_t value )
 {
     // TODO: This probably does not work for negative values
 
-    sprintf( msg, "%d", (uint16_t) (value/4) );
-    UART_Send( huart, msg );
+    printf( "%d", (uint16_t) (value/4) );
     switch (value & 3)
     {
         case 0:
-            UART_Send( huart, ".00" );
+            printf( ".00" );
             break;
         case 1:
-            UART_Send( huart, ".25" );
+            printf( ".25" );
             break;
         case 2:
-            UART_Send( huart, ".50" );
+            printf( ".50" );
             break;
         case 3:
-            UART_Send( huart, ".75" );
+            printf( ".75" );
             break;
     }
 }
